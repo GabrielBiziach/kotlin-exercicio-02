@@ -13,11 +13,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.RemoveCircle
@@ -33,6 +35,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -43,9 +46,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.NavHost
@@ -84,6 +91,7 @@ fun FinanceApp() {
     val ganhos = remember { mutableStateListOf<Registro>() }
     val gastos = remember { mutableStateListOf<Registro>() }
     val sonhos = remember { mutableStateListOf<Sonho>() }
+    var nomeUsuario by remember { mutableStateOf("Gabriel") }
 
     val totalGanhos by remember { derivedStateOf { ganhos.sumOf { it.valor } } }
     val totalGastos by remember { derivedStateOf { gastos.sumOf { it.valor } } }
@@ -148,7 +156,13 @@ fun FinanceApp() {
                 startDestination = AppRoute.Inicio.route
             ) {
                 composable(AppRoute.Inicio.route) {
-                    InicioScreen(totalGanhos = totalGanhos, totalGastos = totalGastos, saldo = saldo)
+                    InicioScreen(
+                        nomeUsuario = nomeUsuario,
+                        onNomeChange = { nomeUsuario = it },
+                        totalGanhos = totalGanhos,
+                        totalGastos = totalGastos,
+                        saldo = saldo
+                    )
                 }
                 composable(AppRoute.Ganhos.route) {
                     RegistrosScreen(
@@ -188,27 +202,258 @@ fun routeIcon(route: AppRoute): ImageVector {
 }
 
 @Composable
-fun InicioScreen(totalGanhos: Double, totalGastos: Double, saldo: Double) {
-    Column(
+fun InicioScreen(
+    nomeUsuario: String,
+    onNomeChange: (String) -> Unit,
+    totalGanhos: Double,
+    totalGastos: Double,
+    saldo: Double
+) {
+    var editando by remember { mutableStateOf(false) }
+    var novoNome by remember { mutableStateOf(nomeUsuario) }
+    
+    val percentualEconomia = if (totalGanhos > 0) {
+        ((totalGanhos - totalGastos) / totalGanhos * 100).toInt()
+    } else {
+        0
+    }
+
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Pagina inicial", style = MaterialTheme.typography.titleLarge)
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Total de ganhos: ${money(totalGanhos)}")
-                Text("Total de gastos: ${money(totalGastos)}")
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                Text("Valor em conta: ${money(saldo)}")
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                if (editando) {
+                    OutlinedTextField(
+                        value = novoNome,
+                        onValueChange = { novoNome = it },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        textStyle = androidx.compose.material3.LocalTextStyle.current.copy(fontSize = 20.sp)
+                    )
+                    TextButton(
+                        onClick = {
+                            onNomeChange(novoNome)
+                            editando = false
+                        }
+                    ) {
+                        Text("Salvar")
+                    }
+                } else {
+                    Column {
+                        Text(
+                            "Oi, $nomeUsuario!",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "Bem-vindo ao seu gerenciador financeiro",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    TextButton(
+                        onClick = { editando = true }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Edit,
+                            contentDescription = "Editar nome",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "Saldo em Conta",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        money(saldo),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        if (saldo >= 0) "✓ Você está no controle" else "⚠ Atenção ao saldo",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
+                    )
+                }
+            }
+        }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                InfoCard(
+                    titulo = "Ganhos",
+                    valor = totalGanhos,
+                    icon = Icons.Filled.AddCircle,
+                    backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    modifier = Modifier.weight(1f)
+                )
+                InfoCard(
+                    titulo = "Gastos",
+                    valor = totalGastos,
+                    icon = Icons.Filled.RemoveCircle,
+                    backgroundColor = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                "Taxa de Economia",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "Do seu ganho total",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Text(
+                            "$percentualEconomia%",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (percentualEconomia >= 30) {
+                                MaterialTheme.colorScheme.tertiary
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
+                            fontSize = 28.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    // Progress bar simples com cor
+                    androidx.compose.material3.LinearProgressIndicator(
+                        progress = { (percentualEconomia / 100f).coerceIn(0f, 1f) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp),
+                        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
+                        color = if (percentualEconomia >= 30) {
+                            MaterialTheme.colorScheme.tertiary
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        }
+                    )
+                }
+            }
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "💡 Dica do Dia",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Mantenha uma taxa de economia de pelo menos 20% do seu ganho mensal para construir um bom fundo de emergência.",
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Justify
+                    )
+                }
+            }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(20.dp))
+        }
+    }
+}
+
+@Composable
+private fun InfoCard(
+    titulo: String,
+    valor: Double,
+    icon: ImageVector,
+    backgroundColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = titulo,
+                modifier = Modifier.size(32.dp),
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                titulo,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                money(valor),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
         }
     }
 }
